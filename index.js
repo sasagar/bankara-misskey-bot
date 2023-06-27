@@ -52,13 +52,31 @@ const sendMessage = async (msg, visibility = null, cw = null, replyId = null) =>
 }
 
 /**
+ * Get schedule data.
+ * @since v1.0.2
+ * @returns {Object} - Schedule data.
+ */
+
+const getJson = async () => {
+    try {
+        const json = await axios.get(JSON_URL);
+        return json;
+    } catch (e) {
+        console.error(e);
+        sendMessage('$[x2 :error:]\nAPIのデータに問題があるため、定時のシフトのお知らせができませんでした。');
+        return null;
+    }
+}
+
+/**
  * Make and send message to Misskey.
  * @since v1.0.0
  * @returns {void}
  */
 const bankara = async () => {
+    const res = await getJson();
+
     try {
-        const res = await axios.get(JSON_URL);
 
         const regularNow = new MessageMaker(res.data.regular[0], "レギュラーマッチ", true);
         const regularNext = new MessageMaker(res.data.regular[1], "レギュラーマッチ", false);
@@ -87,7 +105,7 @@ const bankara = async () => {
         }
     } catch (e) {
         console.error(e);
-        sendMessage('$[x2 :error:]\nAPIのデータに問題があるため、定時のシフトのお知らせができませんでした。');
+        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。');
     }
 
 }
