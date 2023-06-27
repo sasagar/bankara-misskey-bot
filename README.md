@@ -1,12 +1,12 @@
-# Grizzco Misskey-bot
+# Bankara Misskey-bot
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/sasagar/grizzco-misskey-bot/build-image.yml?label=Container%20Build&style=for-the-badge)
+![Bankara Workflow Status](https://img.shields.io/github/actions/workflow/status/sasagar/bankara-misskey-bot/build-image.yml?label=Container%20Build&style=for-the-badge)
 
-![GitHub package.json version (subfolder of monorepo)](https://img.shields.io/github/package-json/v/sasagar/grizzco-misskey-bot?style=for-the-badge) ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/sasagar/grizzco-misskey-bot?include_prereleases&style=for-the-badge)
+![GitHub package.json version (subfolder of monorepo)](https://img.shields.io/github/package-json/v/sasagar/bankara-misskey-bot?style=for-the-badge) ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/sasagar/bankara-misskey-bot?include_prereleases&style=for-the-badge)
 
 ## What
 
-Post Grizzco (Co-op mode of Splatoon 3 a.k.a. Salmon Run Next Wave) schedule to Misskey.
+Post Splatoon3 schedule to Misskey.
 
 ## Getting started
 
@@ -15,7 +15,7 @@ At any directory that specified, make `compose.yml` like below.
 ```yaml
 services:
   grizzco-misskey-bot:
-    image: ghcr.io/sasagar/grizzco-misskey-bot
+    image: ghcr.io/sasagar/bankara-misskey-bot
     restart: always
     volumes:
       - .env:/usr/src/app/.env:ro
@@ -40,8 +40,6 @@ And you can get the note as it scheduled.
 ## Spec
 
 - Usualy, the notes are send in every 2 hours. (even-numbered hour at UTC)
-- Last of the shift, note would be sent in every hours with the next shift. (Last 2 hour, Last 1 hour and at the time schedule changed.)
-- When BigRun detected, the information would added after the normal schedule(s).
 - Now, only supports Japanese. (Of course you can contribute!)
 
 ## Spacial thanks
