@@ -14,7 +14,7 @@ At any directory that specified, make `compose.yml` like below.
 
 ```yaml
 services:
-  grizzco-misskey-bot:
+  bankara-misskey-bot:
     image: ghcr.io/sasagar/bankara-misskey-bot
     restart: always
     volumes:
