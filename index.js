@@ -79,7 +79,7 @@ const bankara = async () => {
         if (res.data.event.length > 0) {
             const eventNow = new MessageMaker(res.data.event[0], "イベントマッチ", true);
             let eventMsg = eventNow.maker();
-            if (res.data.event.length > 2) {
+            if (res.data.event.length > 1) {
                 const eventNext = new MessageMaker(res.data.event[1], "イベントマッチ", false);
                 eventMsg += `\n---\n${eventNext.maker()}`;
             }
