@@ -77,35 +77,58 @@ const bankara = async () => {
     const res = await getJson();
 
     try {
-
         const regularNow = new MessageMaker(res.data.regular[0], "レギュラーマッチ", true);
         const regularNext = new MessageMaker(res.data.regular[1], "レギュラーマッチ", false);
         const regularMsg = `${regularNow.maker()}\n---\n${regularNext.maker()}`;
+        sendMessage(regularMsg);
+    } catch (e) {
+        console.error(e);
+        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(R)');
+    }
 
+    try {
         const bankaraNow = new MessageMaker(res.data.bankara[0], "バンカラマッチ", true);
         const bankaraNext = new MessageMaker(res.data.bankara[1], "バンカラマッチ", false);
         const bankaraMsg = `${bankaraNow.maker()}\n---\n${bankaraNext.maker()}`;
+        sendMessage(bankaraMsg);
+    } catch (e) {
+        console.error(e);
+        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(B)');
+    }
 
+    try {
         const xNow = new MessageMaker(res.data.xmatch[0], "Xマッチ", true,);
         const xNext = new MessageMaker(res.data.xmatch[1], "Xマッチ", false);
         const xMsg = `${xNow.maker()}\n---\n${xNext.maker()}`;
+        sendMessage(xMsg);
+    } catch (e) {
+        console.error(e);
+        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(X)');
+    }
 
-        await sendMessage(regularMsg);
-        await sendMessage(bankaraMsg);
-        await sendMessage(xMsg);
-
+    try {
         if (res.data.event.length > 0) {
-            const eventNow = new MessageMaker(res.data.event[0], "イベントマッチ", true);
+            const now = Date.now() / 1000;
+            let eventNow;
+            let eventNext;
+            if (now > res.data.event[0].time[0].start) {
+                eventNow = new MessageMaker(res.data.event[0], "イベントマッチ", true);
+                if (res.data.event.length > 1) {
+                    eventNext = new MessageMaker(res.data.event[1], "イベントマッチ", false);
+                }
+            } else {
+                eventNow = new MessageMaker(res.data.event[0], "イベントマッチ", false);
+            }
+
             let eventMsg = eventNow.maker();
-            if (res.data.event.length > 1) {
-                const eventNext = new MessageMaker(res.data.event[1], "イベントマッチ", false);
+            if (eventNext != null) {
                 eventMsg += `\n---\n${eventNext.maker()}`;
             }
-            await sendMessage(eventMsg);
+            sendMessage(eventMsg);
         }
     } catch (e) {
         console.error(e);
-        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。');
+        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(E)');
     }
 
 }
