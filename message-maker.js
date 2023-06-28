@@ -21,15 +21,33 @@ const MessageMaker = class {
          * Object of rule badges.
          * @since v1.0.0
          * @type {Object}
-         */
+        */
         this.ruleBadges = JSON.parse(fs.readFileSync('./JSON/rules.json'));
 
         /**
          * Object of category badges.
          * @since v1.0.0
          * @type {Object}
-         */
+        */
         this.catBadges = JSON.parse(fs.readFileSync('./JSON/categories.json'));
+
+        /**
+         * Return stage string to post.
+         * @since v1.0.6
+         * @param {Object} shiftObj - Object of shift.
+         * @returns {string} - Stage names.
+         */
+        this.stageMaker = (shiftObj) => {
+            let res = '';
+            shiftObj.forEach((obj, index, arr) => {
+                res = obj.name;
+
+                if (index !== arr.length - 1) {
+                    res += " / ";
+                }
+            });
+            return res;
+        }
     }
 
     // ルールバッジ存在チェック
@@ -70,24 +88,13 @@ const MessageMaker = class {
         return result;
     }
 
+
     /**
      * Return stage string to post.
      * @since v1.0.6
-     * @param {Object} shiftObj - Object of shift.
-     * @returns {string} - Stage names.
+     * @param {string} cat - Category of Bankara Match. (OPEN | CHALLENGE)
+     * @returns {string} - Text of rules.
      */
-    static stageMaker(shiftObj) {
-        let res = '';
-        shiftObj.forEach((obj, index, arr) => {
-            res = obj.name;
-
-            if (index !== arr.length - 1) {
-                res += " / ";
-            }
-        });
-        return res;
-    }
-
     bankaraRuleStageMessageMaker(cat) {
         const text = (cat === 'OPEN') ? 'オープン' : 'チャレンジ';
         return `**${text}** ${this.ruleBadgeId(this.shift[cat].rule.name)} ${this.shift[cat].rule.name}\n`
