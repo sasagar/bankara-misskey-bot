@@ -71,6 +71,29 @@ const MessageMaker = class {
     }
 
     /**
+     * Return stage string to post.
+     * @since v1.0.6
+     * @param {Object} shiftObj - Object of shift.
+     * @returns {string} - Stage names.
+     */
+    static stageMaker(shiftObj) {
+        let res = '';
+        shiftObj.forEach((obj, index, arr) => {
+            res = obj.name;
+
+            if (index !== arr.length - 1) {
+                res += " / ";
+            }
+        });
+        return res;
+    }
+
+    bankaraRuleStageMessageMaker(cat) {
+        const text = (cat === 'OPEN') ? 'オープン' : 'チャレンジ';
+        return `**${text}** ${this.ruleBadgeId(this.shift[cat].rule.name)} ${this.shift[cat].rule.name}\n`
+    }
+
+    /**
      * Make message to send.
      * @since v1.0.0
      * @returns {string} - Message to send
@@ -86,73 +109,37 @@ const MessageMaker = class {
             msg += "**次の";
         }
 
-        msg += this.category;
-        msg += this.catBadgeId(this.category);
-        msg += "**";
+        msg += `${this.category + this.catBadgeId(this.category)}**`;
 
         if (this.category !== 'イベントマッチ' && !this.now) {
-            msg += "\n";
-            msg += `${format(utcToZonedTime(new Date(this.shift.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })}スタート！`;
+            msg += `\n${format(utcToZonedTime(new Date(this.shift.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })}スタート！`;
         }
         msg += "\n";
 
         if (this.category === "バンカラマッチ") {
-            msg += "**チャレンジ**";
-            msg += " ";
-            msg += this.ruleBadgeId(this.shift.CHALLENGE.rule.name);
-            msg += " ";
-            msg += this.shift.CHALLENGE.rule.name;
+            msg += this.bankaraRuleStageMessageMaker('CHALLENGE');
+
+            msg += "ステージ: ";
+            msg += this.stageMaker(this.shift.CHALLENGE.stage);
+
             msg += "\n";
+            msg += this.bankaraRuleStageMessageMaker('OPEN');
 
             msg += "ステージ: ";
 
-            this.shift.CHALLENGE.stage.forEach((obj, index, arr) => {
-                msg += obj.name;
-
-                if (index !== arr.length - 1) {
-                    msg += " / ";
-                }
-            });
-            msg += "\n";
-
-            msg += "**オープン**";
-            msg += " ";
-            msg += this.ruleBadgeId(this.shift.OPEN.rule.name);
-            msg += " ";
-            msg += this.shift.OPEN.rule.name;
-            msg += "\n";
-
-            msg += "ステージ: ";
-
-            this.shift.CHALLENGE.stage.forEach((obj, index, arr) => {
-                msg += obj.name;
-
-                if (index !== arr.length - 1) {
-                    msg += " / ";
-                }
-            });
+            msg += this.stageMaker(this.shift.OPEN.stage);
         } else {
             if (this.category === "イベントマッチ") {
-                msg += `**${this.shift.name}**`;
-                msg += "\n";
+                msg += `**${this.shift.name}**\n`;
                 // msg += this.shift.desc;
                 // msg += "\n";
-                msg += "<small>";
-                msg += this.shift.regulation.replace(/<br \/>/g, "\n");
-                msg += "</small>";
-                msg += "\n";
+                msg += `<small>${this.shift.regulation.replace(/<br \/>/g, "\n")}</small>\n`;
             }
-            msg += this.ruleBadgeId(this.shift.rule.name);
-            msg += " ";
-            msg += this.shift.rule.name;
-            msg += "\n";
+            msg += `${this.ruleBadgeId(this.shift.rule.name)} ${this.shift.rule.name}\n`;
 
             if (this.category === "イベントマッチ") {
                 this.shift.time.forEach((obj, index, arr) => {
-                    msg += "・";
-                    msg += format(utcToZonedTime(new Date(obj.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja });
-                    msg += " - ";
-                    msg += format(utcToZonedTime(new Date(obj.endunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })
+                    msg += `・${format(utcToZonedTime(new Date(obj.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })} - ${format(utcToZonedTime(new Date(obj.endunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })}`
 
                     if (index !== arr.length - 1) {
                         msg += "\n";
@@ -163,13 +150,7 @@ const MessageMaker = class {
 
             msg += "ステージ: ";
 
-            this.shift.stage.forEach((obj, index, arr) => {
-                msg += obj.name;
-
-                if (index !== arr.length - 1) {
-                    msg += " / ";
-                }
-            });
+            msg += this.stageMaker(this.shift.stage);
         }
         return msg;
     }

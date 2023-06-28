@@ -73,6 +73,7 @@ const getJson = async () => {
  * @param {Object} shift - All shift includes schedules to send.
  * @param {int} index - Array index of origin schedule.
  * @param {string} category - Category name.
+ * @returns {void}
  */
 
 const sendNote = async (shift, index = 0, category = '') => {
@@ -96,18 +97,9 @@ const bankara = async () => {
     const res = await getJson();
     const now = Date.now() / 1000;
 
-    let i = 0;
-    if (res.data.regular[0].endunix < now) {
-        i = 1;
-    }
+    const i = (res.data.regular[0].endunix < now) ? 1 : 0;
 
-    await sendNote(res.data.regular, i, 'レギュラーマッチ');
-
-    await sendNote(res.data.bankara, i, 'バンカラマッチ');
-
-    await sendNote(res.data.xmatch, i, 'Xマッチ');
-
-    try {
+    const eventSendNote = () => {
         if (res.data.event.length > 0) {
             let eventNow;
             let eventNext;
@@ -126,6 +118,14 @@ const bankara = async () => {
             }
             sendMessage(eventMsg);
         }
+    }
+
+    await sendNote(res.data.regular, i, 'レギュラーマッチ');
+    await sendNote(res.data.bankara, i, 'バンカラマッチ');
+    await sendNote(res.data.xmatch, i, 'Xマッチ');
+
+    try {
+        eventSendNote();
     } catch (e) {
         console.error(e);
         sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(イベントマッチ)');
