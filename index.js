@@ -56,7 +56,6 @@ const sendMessage = async (msg, visibility = null, cw = null, replyId = null) =>
  * @since v1.0.2
  * @returns {Object} - Schedule data.
  */
-
 const getJson = async () => {
     try {
         const json = await axios.get(JSON_URL);
@@ -65,6 +64,26 @@ const getJson = async () => {
         console.error(e);
         sendMessage('$[x2 :error:]\nAPIのデータに問題があるため、定時のシフトのお知らせができませんでした。');
         return null;
+    }
+}
+
+/**
+ * Create note and send.
+ * @since v1.0.5
+ * @param {Object} shift - All shift includes schedules to send.
+ * @param {int} index - Array index of origin schedule.
+ * @param {string} category - Category name.
+ */
+
+const sendNote = async (shift, index = 0, category = '') => {
+    try {
+        const noteNow = new MessageMaker(shift[index], category, true);
+        const noteNext = new MessageMaker(shift[index + 1], category, false);
+        const noteMsg = `${noteNow.maker()}\n---\n${noteNext.maker()}`;
+        sendMessage(noteMsg);
+    } catch (e) {
+        console.error(e);
+        sendMessage(`$[x2 :error:]\nNoteの送信に失敗しました。(${category})`);
     }
 }
 
@@ -82,35 +101,11 @@ const bankara = async () => {
         i = 1;
     }
 
-    try {
-        const regularNow = new MessageMaker(res.data.regular[i], "レギュラーマッチ", true);
-        const regularNext = new MessageMaker(res.data.regular[i + 1], "レギュラーマッチ", false);
-        const regularMsg = `${regularNow.maker()}\n---\n${regularNext.maker()}`;
-        sendMessage(regularMsg);
-    } catch (e) {
-        console.error(e);
-        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(R)');
-    }
+    await sendNote(res.data.regular, i, 'レギュラーマッチ');
 
-    try {
-        const bankaraNow = new MessageMaker(res.data.bankara[i], "バンカラマッチ", true);
-        const bankaraNext = new MessageMaker(res.data.bankara[i + 1], "バンカラマッチ", false);
-        const bankaraMsg = `${bankaraNow.maker()}\n---\n${bankaraNext.maker()}`;
-        sendMessage(bankaraMsg);
-    } catch (e) {
-        console.error(e);
-        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(B)');
-    }
+    await sendNote(res.data.bankara, i, 'バンカラマッチ');
 
-    try {
-        const xNow = new MessageMaker(res.data.xmatch[i], "Xマッチ", true,);
-        const xNext = new MessageMaker(res.data.xmatch[i + 1], "Xマッチ", false);
-        const xMsg = `${xNow.maker()}\n---\n${xNext.maker()}`;
-        sendMessage(xMsg);
-    } catch (e) {
-        console.error(e);
-        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(X)');
-    }
+    await sendNote(res.data.xmatch, i, 'Xマッチ');
 
     try {
         if (res.data.event.length > 0) {
@@ -133,7 +128,7 @@ const bankara = async () => {
         }
     } catch (e) {
         console.error(e);
-        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(E)');
+        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(イベントマッチ)');
     }
 
 }
