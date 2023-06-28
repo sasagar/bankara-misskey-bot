@@ -25,26 +25,24 @@ const MessageMaker = class {
         this.ruleBadges = JSON.parse(fs.readFileSync('./JSON/rules.json'));
 
         /**
-         * Object of category badges.
+         * Object of category badges. 
          * @since v1.0.0
          * @type {Object}
         */
         this.catBadges = JSON.parse(fs.readFileSync('./JSON/categories.json'));
 
         /**
-         * Return stage string to post.
+         * Return stage string to post. 
          * @since v1.0.6
          * @param {Object} shiftObj - Object of shift.
          * @returns {string} - Stage names.
-         */
+        */
         this.stageMaker = (shiftObj) => {
+            console.log('func: MessageMaker.stageMaker');
             let res = '';
             shiftObj.forEach((obj, index, arr) => {
-                res = obj.name;
-
-                if (index !== arr.length - 1) {
-                    res += " / ";
-                }
+                res += obj.name;
+                res += (index !== arr.length - 1) ? ' / ' : '';
             });
             return res;
         }
@@ -52,112 +50,78 @@ const MessageMaker = class {
 
     // ルールバッジ存在チェック
     /**
-     * Get rule badge tag.
-     * @since v1.0.0
+     * Get rule badge tag. 
+     * @since v1.0.8
      * @param {string} name - Name of the rule.
+     * @param {string} series - Name of the series. (rule || cat)
      * @returns {string} - Badge image tag or blank string
-     */
-    ruleBadgeId(name) {
-        let result;
-
-        if (Reflect.has(this.ruleBadges, name)) {
-            result = this.ruleBadges[name];
-        } else {
-            result = "";
-        }
-
+    */
+    getBadgeId(name, series) {
+        const obj = (series === 'rule') ? this.ruleBadges : this.catBadges;
+        const result = (Reflect.has(obj, name)) ? obj[name] : "";
         return result;
     }
 
-    // カテゴリバッジ存在チェック
     /**
-     * Get category badge tag.
-     * @since v1.0.0
-     * @param {string} name - Name of the category.
-     * @returns {string} - Badge image tag or blank string
-     */
-    catBadgeId(name) {
-        let result;
-
-        if (Reflect.has(this.catBadges, name)) {
-            result = this.catBadges[name];
-        } else {
-            result = "";
-        }
-
-        return result;
-    }
-
-
-    /**
-     * Return stage string to post.
+     * Return stage string to post. 
      * @since v1.0.6
      * @param {string} cat - Category of Bankara Match. (OPEN | CHALLENGE)
      * @returns {string} - Text of rules.
-     */
+    */
     bankaraRuleStageMessageMaker(cat) {
         const text = (cat === 'OPEN') ? 'オープン' : 'チャレンジ';
-        return `**${text}** ${this.ruleBadgeId(this.shift[cat].rule.name)} ${this.shift[cat].rule.name}\n`
+        return `**${text}** ${this.getBadgeId(this.shift[cat].rule.name, 'rule')} ${this.shift[cat].rule.name}\n`
+    }
+
+    /**
+     * Return schedule list.
+     * @since v1.0.8
+     * @param {Object} time - Object of time list.
+     * @returns {string} - Text of time list.
+     */
+    timeList() {
+        console.log('func: messageMaker.timeList');
+        let res = '';
+        this.shift.time.forEach((obj, index, arr) => {
+            res += `・${format(utcToZonedTime(new Date(obj.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })} - ${format(utcToZonedTime(new Date(obj.endunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })}`;
+            res += (index !== arr.length - 1) ? "\n" : '';
+        });
+        return res;
     }
 
     /**
      * Make message to send.
      * @since v1.0.0
      * @returns {string} - Message to send
-     */
+    */
     maker() {
-        console.log('func: message.maker');
+        console.log('func: messageMaker.maker');
         /** @type {string} */
-        let msg = "";
+        const rule = (this.category !== 'バンカラマッチ') ? `${this.getBadgeId(this.shift.rule.name, 'rule')} ${this.shift.rule.name}\n` : '';
+        /** @type {string} */
+        let msg = (this.now) ? "**ただいまの" : "**次の";
 
-        if (this.now) {
-            msg += "**ただいまの";
-        } else {
-            msg += "**次の";
-        }
+        msg += `${this.category + this.getBadgeId(this.category, 'cat')}**`;
 
-        msg += `${this.category + this.catBadgeId(this.category)}**`;
-
-        if (this.category !== 'イベントマッチ' && !this.now) {
-            msg += `\n${format(utcToZonedTime(new Date(this.shift.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })}スタート！`;
-        }
+        msg += (this.category !== 'イベントマッチ' && !this.now) ? `\n${format(utcToZonedTime(new Date(this.shift.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })}スタート！` : '';
         msg += "\n";
 
-        if (this.category === "バンカラマッチ") {
-            msg += this.bankaraRuleStageMessageMaker('CHALLENGE');
-
-            msg += "ステージ: ";
-            msg += this.stageMaker(this.shift.CHALLENGE.stage);
-
-            msg += "\n";
-            msg += this.bankaraRuleStageMessageMaker('OPEN');
-
-            msg += "ステージ: ";
-
-            msg += this.stageMaker(this.shift.OPEN.stage);
-        } else {
-            if (this.category === "イベントマッチ") {
+        switch (this.category) {
+            case 'バンカラマッチ':
+                msg += this.bankaraRuleStageMessageMaker('CHALLENGE');
+                msg += `ステージ: ${this.stageMaker(this.shift.CHALLENGE.stage)}`;
+                msg += `\n${this.bankaraRuleStageMessageMaker('OPEN')}`;
+                msg += `ステージ: ${this.stageMaker(this.shift.OPEN.stage)}`;
+                break;
+            case 'イベントマッチ':
                 msg += `**${this.shift.name}**\n`;
-                // msg += this.shift.desc;
-                // msg += "\n";
-                msg += `<small>${this.shift.regulation.replace(/<br \/>/g, "\n")}</small>\n`;
-            }
-            msg += `${this.ruleBadgeId(this.shift.rule.name)} ${this.shift.rule.name}\n`;
-
-            if (this.category === "イベントマッチ") {
-                this.shift.time.forEach((obj, index, arr) => {
-                    msg += `・${format(utcToZonedTime(new Date(obj.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })} - ${format(utcToZonedTime(new Date(obj.endunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })}`
-
-                    if (index !== arr.length - 1) {
-                        msg += "\n";
-                    }
-                });
-                msg += "\n";
-            }
-
-            msg += "ステージ: ";
-
-            msg += this.stageMaker(this.shift.stage);
+                msg += `<small>${this.shift.regulation.replace(/<br \/>/g, "\n").replace(/\n\n/g, "\n")}</small>\n`;
+                msg += `${rule + this.timeList()}\n`;
+                msg += `ステージ: ${this.stageMaker(this.shift.stage)}`;
+                break;
+            default:
+                msg += rule;
+                msg += `ステージ: ${this.stageMaker(this.shift.stage)}`;
         }
         return msg;
     }
