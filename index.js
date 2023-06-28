@@ -75,10 +75,16 @@ const getJson = async () => {
  */
 const bankara = async () => {
     const res = await getJson();
+    const now = Date.now() / 1000;
+
+    let i = 0;
+    if (res.data.regular[0].endunix < now) {
+        i = 1;
+    }
 
     try {
-        const regularNow = new MessageMaker(res.data.regular[0], "レギュラーマッチ", true);
-        const regularNext = new MessageMaker(res.data.regular[1], "レギュラーマッチ", false);
+        const regularNow = new MessageMaker(res.data.regular[i], "レギュラーマッチ", true);
+        const regularNext = new MessageMaker(res.data.regular[i + 1], "レギュラーマッチ", false);
         const regularMsg = `${regularNow.maker()}\n---\n${regularNext.maker()}`;
         sendMessage(regularMsg);
     } catch (e) {
@@ -87,8 +93,8 @@ const bankara = async () => {
     }
 
     try {
-        const bankaraNow = new MessageMaker(res.data.bankara[0], "バンカラマッチ", true);
-        const bankaraNext = new MessageMaker(res.data.bankara[1], "バンカラマッチ", false);
+        const bankaraNow = new MessageMaker(res.data.bankara[i], "バンカラマッチ", true);
+        const bankaraNext = new MessageMaker(res.data.bankara[i + 1], "バンカラマッチ", false);
         const bankaraMsg = `${bankaraNow.maker()}\n---\n${bankaraNext.maker()}`;
         sendMessage(bankaraMsg);
     } catch (e) {
@@ -97,8 +103,8 @@ const bankara = async () => {
     }
 
     try {
-        const xNow = new MessageMaker(res.data.xmatch[0], "Xマッチ", true,);
-        const xNext = new MessageMaker(res.data.xmatch[1], "Xマッチ", false);
+        const xNow = new MessageMaker(res.data.xmatch[i], "Xマッチ", true,);
+        const xNext = new MessageMaker(res.data.xmatch[i + 1], "Xマッチ", false);
         const xMsg = `${xNow.maker()}\n---\n${xNext.maker()}`;
         sendMessage(xMsg);
     } catch (e) {
@@ -108,7 +114,6 @@ const bankara = async () => {
 
     try {
         if (res.data.event.length > 0) {
-            const now = Date.now() / 1000;
             let eventNow;
             let eventNext;
             if (now > res.data.event[0].time[0].start) {
