@@ -88,6 +88,11 @@ const MessageMaker = class {
         return res;
     }
 
+    bankaraRuleStageMessageMaker(cat) {
+        const text = (cat === 'OPEN') ? 'オープン' : 'チャレンジ';
+        return `**${text}** ${this.ruleBadgeId(this.shift[cat].rule.name)} ${this.shift[cat].rule.name}\n`
+    }
+
     /**
      * Make message to send.
      * @since v1.0.0
@@ -112,12 +117,13 @@ const MessageMaker = class {
         msg += "\n";
 
         if (this.category === "バンカラマッチ") {
-            msg += `**チャレンジ** ${this.ruleBadgeId(this.shift.CHALLENGE.rule.name)} ${this.shift.CHALLENGE.rule.name}\n`;
+            msg += this.bankaraRuleStageMessageMaker('CHALLENGE');
 
             msg += "ステージ: ";
             msg += this.stageMaker(this.shift.CHALLENGE.stage);
 
-            msg += `\n**オープン** ${this.ruleBadgeId(this.shift.OPEN.rule.name)} ${this.shift.OPEN.rule.name}\n`;
+            msg += "\n";
+            msg += this.bankaraRuleStageMessageMaker('OPEN');
 
             msg += "ステージ: ";
 
