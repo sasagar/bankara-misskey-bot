@@ -1,17 +1,17 @@
 /* eslint-disable camelcase */
-import * as Misskey from 'misskey-js';
-import axios from 'axios';
-import schedule from 'node-schedule';
-import * as dotenv from 'dotenv';
+import * as Misskey from "misskey-js";
+import axios from "axios";
+import schedule from "node-schedule";
+// import * as dotenv from "dotenv";
 
 // eslint-disable-next-line import/extensions
-import MessageMaker from './message-maker.js';
+import MessageMaker from "./message-maker.js";
 
 // 設定項目読み込み
-dotenv.config();
+// dotenv.config();
 const { BOT_TOKEN, MISSKEY_URL, JSON_URL, npm_package_version } = process.env;
 
-process.title = 'Bankara Misskey Bot';
+process.title = "Bankara Misskey Bot";
 
 // Misskeyへ接続
 /**
@@ -20,52 +20,77 @@ process.title = 'Bankara Misskey Bot';
  * @type {Misskey}
  * @instance
  */
-const cli = new Misskey.api.APIClient(
-    {
-        origin: MISSKEY_URL,
-        credential: BOT_TOKEN
-    });
+const cli = new Misskey.api.APIClient({
+	origin: MISSKEY_URL,
+	credential: BOT_TOKEN,
+});
 
 // メッセージ送信用function
 /**
  * Send message to Misskey.
  * @since v1.0.0
- * @param {string} msg - Message to send. 
+ * @param {string} msg - Message to send.
  * @param {boolean} visibility - Flag of visibility.
  * @param {boolean} cw - Flag of CW.
  * @param {string} replyId - User ID to reply.
  * @returns {void}
  */
-const sendMessage = async (msg, visibility = null, cw = null, replyId = null) => {
-    console.log('func: sendMessage');
-    const args = { text: msg };
-    if (visibility) {
-        args.visibility = visibility;
-    }
-    if (cw) {
-        args.cw = cw;
-    }
-    if (replyId) {
-        args.replyId = replyId;
-    }
-    await cli.request('notes/create', args).catch(e => { console.error(e) });
-}
+const sendMessage = async (
+	msg,
+	visibility = null,
+	cw = null,
+	replyId = null,
+) => {
+	console.log("func: sendMessage");
+	const args = { text: msg };
+	if (visibility) {
+		args.visibility = visibility;
+	}
+	if (cw) {
+		args.cw = cw;
+	}
+	if (replyId) {
+		args.replyId = replyId;
+	}
+	await cli.request("notes/create", args).catch((e) => {
+		console.error(e);
+	});
+};
 
 /**
  * Get schedule data.
+ * Since v1.0.2
+ * Updated v2.0.0
  * @since v1.0.2
  * @returns {Object} - Schedule data.
  */
 const getJson = async () => {
-    try {
-        const json = await axios.get(JSON_URL);
-        return json;
-    } catch (e) {
-        console.error(e);
-        sendMessage('$[x2 :error:]\nAPIのデータに問題があるため、定時のシフトのお知らせができませんでした。');
-        return null;
-    }
-}
+	try {
+		const regular = await axios.get(`${JSON_URL}/regular/schedule`);
+		const bankara_open = await axios.get(`${JSON_URL}/bankara-open/schedule`);
+		const bankara_challenge = await axios.get(
+			`${JSON_URL}/bankara-challenge/schedule`,
+		);
+		const x = await axios.get(`${JSON_URL}/x/schedule`);
+		const event_tmp = await axios.get(`${JSON_URL}/event/schedule`);
+		const event = event_tmp.data.results.filter((e) => e.rule != null);
+		const json = {
+			regular: regular.data.results,
+			bankara_open: bankara_open.data.results,
+			bankara_challenge: bankara_challenge.data.results,
+			x: x.data.results,
+			event: event,
+		};
+
+		return json;
+	} catch (e) {
+		console.error(e);
+		sendMessage(
+			"$[x2 :error:]\nAPIのデータに問題があるため、定時のシフトのお知らせができませんでした。",
+		);
+		return null;
+	}
+};
 
 /**
  * Create note and send.
@@ -73,19 +98,47 @@ const getJson = async () => {
  * @param {Object} shift - All shift includes schedules to send.
  * @param {int} index - Array index of origin schedule.
  * @param {string} category - Category name.
+ * @returns {void}
  */
 
-const sendNote = async (shift, index = 0, category = '') => {
-    try {
-        const noteNow = new MessageMaker(shift[index], category, true);
-        const noteNext = new MessageMaker(shift[index + 1], category, false);
-        const noteMsg = `${noteNow.maker()}\n---\n${noteNext.maker()}`;
-        sendMessage(noteMsg);
-    } catch (e) {
-        console.error(e);
-        sendMessage(`$[x2 :error:]\nNoteの送信に失敗しました。(${category})`);
-    }
-}
+const sendNote = async (shift, index = 0, category = "") => {
+	console.log("func: sendNote");
+	try {
+		const noteNow = new MessageMaker(shift[index], category, true);
+		const noteNext = new MessageMaker(shift[index + 1], category, false);
+		const noteMsg = `${noteNow.maker()}\n---\n${noteNext.maker()}`;
+		sendMessage(noteMsg);
+	} catch (e) {
+		console.error(e);
+		sendMessage(`$[x2 :error:]\nNoteの送信に失敗しました。(${category})`);
+	}
+};
+
+/**
+ * Create note and send.
+ * @since v1.0.8
+ * @param {Object} res - All shift includes schedules to send.
+ * @param {int} now - Unixtime of now.
+ * @returns {void}
+ */
+
+const eventSendNote = (res, now) => {
+	console.log("func: eventSendNote");
+	let eventNow;
+	let eventNext;
+	if (res.length >= 2 && now > res[0].start_time) {
+		eventNow = new MessageMaker(res[0], "イベントマッチ", true);
+		eventNext = new MessageMaker(res[1], "イベントマッチ", false);
+	} else {
+		eventNow = new MessageMaker(res[0], "イベントマッチ", false);
+	}
+
+	let eventMsg = eventNow.maker();
+	if (eventNext != null) {
+		eventMsg += `\n---\n${eventNext.maker()}`;
+	}
+	sendMessage(eventMsg);
+};
 
 /**
  * Make and send message to Misskey.
@@ -93,45 +146,27 @@ const sendNote = async (shift, index = 0, category = '') => {
  * @returns {void}
  */
 const bankara = async () => {
-    const res = await getJson();
-    const now = Date.now() / 1000;
+	console.log("func: bankara");
+	const res = await getJson();
+	const now = new Date();
+	const regular_time = new Date(res.regular[0].end_time);
 
-    let i = 0;
-    if (res.data.regular[0].endunix < now) {
-        i = 1;
-    }
+	const i = regular_time < now ? 1 : 0;
 
-    await sendNote(res.data.regular, i, 'レギュラーマッチ');
+	sendNote(res.regular, i, "レギュラーマッチ");
+	sendNote(res.bankara_open, i, "バンカラマッチ（オープン）");
+	sendNote(res.bankara_challenge, i, "バンカラマッチ（チャレンジ）");
+	sendNote(res.x, i, "Xマッチ");
 
-    await sendNote(res.data.bankara, i, 'バンカラマッチ');
-
-    await sendNote(res.data.xmatch, i, 'Xマッチ');
-
-    try {
-        if (res.data.event.length > 0) {
-            let eventNow;
-            let eventNext;
-            if (now > res.data.event[0].time[0].start) {
-                eventNow = new MessageMaker(res.data.event[0], "イベントマッチ", true);
-                if (res.data.event.length > 1) {
-                    eventNext = new MessageMaker(res.data.event[1], "イベントマッチ", false);
-                }
-            } else {
-                eventNow = new MessageMaker(res.data.event[0], "イベントマッチ", false);
-            }
-
-            let eventMsg = eventNow.maker();
-            if (eventNext != null) {
-                eventMsg += `\n---\n${eventNext.maker()}`;
-            }
-            sendMessage(eventMsg);
-        }
-    } catch (e) {
-        console.error(e);
-        sendMessage('$[x2 :error:]\nNoteの送信に失敗しました。(イベントマッチ)');
-    }
-
-}
+	try {
+		if (res.event.length > 1) {
+			eventSendNote(res.event, now);
+		}
+	} catch (e) {
+		console.error(e);
+		sendMessage("$[x2 :error:]\nNoteの送信に失敗しました。(イベントマッチ)");
+	}
+};
 
 // スケジュール。奇数時間の正時に実行。
 /**
@@ -140,7 +175,9 @@ const bankara = async () => {
  * @type {schedule}
  */
 // eslint-disable-next-line no-unused-vars
-const bankarajob = schedule.scheduleJob('0 0 1-23/2 * * *', () => { bankara() });
+const bankarajob = schedule.scheduleJob("0 0 1-23/2 * * *", () => {
+	bankara();
+});
 
 /**
  * Return time.
@@ -172,7 +209,7 @@ const bankarajob = schedule.scheduleJob('0 0 1-23/2 * * *', () => { bankara() })
  * @returns {void}
  */
 const upNotice = () => {
-    sendMessage(`【Bot再起動通知】v${npm_package_version} で起動しました。`);
-}
+	sendMessage(`【Bot再起動通知】v${npm_package_version} で起動しました。`);
+};
 
 upNotice();

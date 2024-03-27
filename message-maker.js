@@ -1,7 +1,7 @@
-import fs from 'fs';
-import { format, utcToZonedTime } from 'date-fns-tz';
+import fs from "node:fs";
+import { format, utcToZonedTime } from "date-fns-tz";
 // eslint-disable-next-line import/extensions
-import ja from 'date-fns/locale/ja/index.js';
+import ja from "date-fns/locale/ja/index.js";
 
 /**
  * Class to generate message.
@@ -11,168 +11,147 @@ import ja from 'date-fns/locale/ja/index.js';
  * @param { boolean } now - Now or not.
  */
 const MessageMaker = class {
-    constructor(shift, category, now = true) {
-        this.shift = shift;
-        this.category = category;
-        this.now = now;
+	constructor(shift, category, now = true) {
+		this.shift = shift;
+		this.category = category;
+		this.now = now;
 
-        // ルールのバッジを選べるように
-        /**
-         * Object of rule badges.
-         * @since v1.0.0
-         * @type {Object}
-         */
-        this.ruleBadges = JSON.parse(fs.readFileSync('./JSON/rules.json'));
+		// ルールのバッジを選べるように
+		/**
+		 * Object of rule badges.
+		 * @since v1.0.0
+		 * @type {Object}
+		 */
+		this.ruleBadges = JSON.parse(fs.readFileSync("./JSON/rules.json"));
 
-        /**
-         * Object of category badges.
-         * @since v1.0.0
-         * @type {Object}
-         */
-        this.catBadges = JSON.parse(fs.readFileSync('./JSON/categories.json'));
-    }
+		/**
+		 * Object of category badges.
+		 * @since v1.0.0
+		 * @type {Object}
+		 */
+		this.catBadges = JSON.parse(fs.readFileSync("./JSON/categories.json"));
 
-    // ルールバッジ存在チェック
-    /**
-     * Get rule badge tag.
-     * @since v1.0.0
-     * @param {string} name - Name of the rule.
-     * @returns {string} - Badge image tag or blank string
-     */
-    ruleBadgeId(name) {
-        let result;
+		/**
+		 * Return stage string to post.
+		 * @since v1.0.6
+		 * @param {Object} shiftObj - Object of shift.
+		 * @returns {string} - Stage names.
+		 */
+		this.stageMaker = (shiftObj) => {
+			console.log("func: MessageMaker.stageMaker");
+			let res = "";
+			shiftObj.forEach((obj, index, arr) => {
+				res += obj.name;
+				res += index !== arr.length - 1 ? " / " : "";
+			});
+			return res;
+		};
+	}
 
-        if (Reflect.has(this.ruleBadges, name)) {
-            result = this.ruleBadges[name];
-        } else {
-            result = "";
-        }
+	// ルールバッジ存在チェック
+	/**
+	 * Get rule badge tag.
+	 * @since v1.0.8
+	 * @param {string} name - Name of the rule.
+	 * @param {string} series - Name of the series. (rule || cat)
+	 * @returns {string} - Badge image tag or blank string
+	 */
+	getBadgeId(name, series) {
+		const obj = series === "rule" ? this.ruleBadges : this.catBadges;
+		const result = Reflect.has(obj, name) ? obj[name] : "";
+		return result;
+	}
 
-        return result;
-    }
+	/**
+	 * Return stage string to post.
+	 * @since v1.0.6
+	 * @param {string} cat - Category of Bankara Match. (OPEN | CHALLENGE)
+	 * @returns {string} - Text of rules.
+	 */
+	bankaraRuleStageMessageMaker(cat) {
+		const text = cat === "OPEN" ? "オープン" : "チャレンジ";
+		return `**${text}** ${this.getBadgeId(this.shift.rule.name, "rule")} ${
+			this.shift.rule.name
+		}\n`;
+	}
 
-    // カテゴリバッジ存在チェック
-    /**
-     * Get category badge tag.
-     * @since v1.0.0
-     * @param {string} name - Name of the category.
-     * @returns {string} - Badge image tag or blank string
-     */
-    catBadgeId(name) {
-        let result;
+	/**
+	 * Return schedule list.
+	 * @since v1.0.8
+	 * @param {Object} time - Object of time list.
+	 * @returns {string} - Text of time list.
+	 */
+	timeList() {
+		console.log("func: messageMaker.timeList");
+		let res = "";
+		// this.shift.forEach((obj, index, arr) => {
+		res += `・${format(
+			utcToZonedTime(new Date(this.shift.start_time), "Asia/Tokyo"),
+			"M月d日(E) HH:mm",
+			{ locale: ja },
+		)} - ${format(
+			utcToZonedTime(new Date(this.shift.end_time), "Asia/Tokyo"),
+			"M月d日(E) HH:mm",
+			{ locale: ja },
+		)}`;
+		// res += index !== arr.length - 1 ? "\n" : "";
+		res += "\n";
+		// });
+		return res;
+	}
 
-        if (Reflect.has(this.catBadges, name)) {
-            result = this.catBadges[name];
-        } else {
-            result = "";
-        }
+	/**
+	 * Make message to send.
+	 * @since v1.0.0
+	 * @returns {string} - Message to send
+	 */
+	maker() {
+		console.log("func: messageMaker.maker");
+		/** @type {string} */
+		const rule =
+			this.category !== "バンカラマッチ"
+				? `${this.getBadgeId(this.shift.rule.name, "rule")} ${
+						this.shift.rule.name
+					}\n`
+				: "";
+		/** @type {string} */
+		let msg = this.now ? "**ただいまの" : "**次の";
 
-        return result;
-    }
+		msg += `${this.category + this.getBadgeId(this.category, "cat")}**`;
 
-    /**
-     * Make message to send.
-     * @since v1.0.0
-     * @returns {string} - Message to send
-     */
-    maker() {
-        console.log('func: message.maker');
-        /** @type {string} */
-        let msg = "";
+		msg +=
+			this.category !== "イベントマッチ" && !this.now
+				? `\n${format(
+						utcToZonedTime(new Date(this.shift.start_time), "Asia/Tokyo"),
+						"M月d日(E) HH:mm",
+						{ locale: ja },
+					)}スタート！`
+				: "";
+		msg += "\n";
 
-        if (this.now) {
-            msg += "**ただいまの";
-        } else {
-            msg += "**次の";
-        }
-
-        msg += this.category;
-        msg += this.catBadgeId(this.category);
-        msg += "**";
-
-        if (this.category !== 'イベントマッチ' && !this.now) {
-            msg += "\n";
-            msg += `${format(utcToZonedTime(new Date(this.shift.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })}スタート！`;
-        }
-        msg += "\n";
-
-        if (this.category === "バンカラマッチ") {
-            msg += "**チャレンジ**";
-            msg += " ";
-            msg += this.ruleBadgeId(this.shift.CHALLENGE.rule.name);
-            msg += " ";
-            msg += this.shift.CHALLENGE.rule.name;
-            msg += "\n";
-
-            msg += "ステージ: ";
-
-            this.shift.CHALLENGE.stage.forEach((obj, index, arr) => {
-                msg += obj.name;
-
-                if (index !== arr.length - 1) {
-                    msg += " / ";
-                }
-            });
-            msg += "\n";
-
-            msg += "**オープン**";
-            msg += " ";
-            msg += this.ruleBadgeId(this.shift.OPEN.rule.name);
-            msg += " ";
-            msg += this.shift.OPEN.rule.name;
-            msg += "\n";
-
-            msg += "ステージ: ";
-
-            this.shift.CHALLENGE.stage.forEach((obj, index, arr) => {
-                msg += obj.name;
-
-                if (index !== arr.length - 1) {
-                    msg += " / ";
-                }
-            });
-        } else {
-            if (this.category === "イベントマッチ") {
-                msg += `**${this.shift.name}**`;
-                msg += "\n";
-                // msg += this.shift.desc;
-                // msg += "\n";
-                msg += "<small>";
-                msg += this.shift.regulation.replace(/<br \/>/g, "\n");
-                msg += "</small>";
-                msg += "\n";
-            }
-            msg += this.ruleBadgeId(this.shift.rule.name);
-            msg += " ";
-            msg += this.shift.rule.name;
-            msg += "\n";
-
-            if (this.category === "イベントマッチ") {
-                this.shift.time.forEach((obj, index, arr) => {
-                    msg += "・";
-                    msg += format(utcToZonedTime(new Date(obj.startunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja });
-                    msg += " - ";
-                    msg += format(utcToZonedTime(new Date(obj.endunix * 1000), 'Asia/Tokyo'), 'M月d日(E) HH:mm', { locale: ja })
-
-                    if (index !== arr.length - 1) {
-                        msg += "\n";
-                    }
-                });
-                msg += "\n";
-            }
-
-            msg += "ステージ: ";
-
-            this.shift.stage.forEach((obj, index, arr) => {
-                msg += obj.name;
-
-                if (index !== arr.length - 1) {
-                    msg += " / ";
-                }
-            });
-        }
-        return msg;
-    }
-}
+		switch (this.category) {
+			case "バンカラマッチ（オープン）":
+				msg += this.bankaraRuleStageMessageMaker("OPEN");
+				msg += `ステージ: ${this.stageMaker(this.shift.stages)}`;
+				break;
+			case "バンカラマッチ（チャレンジ）":
+				msg += this.bankaraRuleStageMessageMaker("CHALLENGE");
+				msg += `ステージ: ${this.stageMaker(this.shift.stages)}`;
+				break;
+			case "イベントマッチ":
+				msg += `**${this.shift.event.name}**\n`;
+				msg += `<small>${this.shift.event.desc
+					.replace(/<br \/>/g, "\n")
+					.replace(/\n\n/g, "\n")}</small>\n`;
+				msg += `${rule + this.timeList()}\n`;
+				msg += `ステージ: ${this.stageMaker(this.shift.stages)}`;
+				break;
+			default:
+				msg += rule;
+				msg += `ステージ: ${this.stageMaker(this.shift.stages)}`;
+		}
+		return msg;
+	}
+};
 
 export default MessageMaker;
