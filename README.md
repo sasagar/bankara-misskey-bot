@@ -44,4 +44,4 @@ And you can get the note as it scheduled.
 
 ## Spacial thanks
 
-Schedule data: <https://koukun.jp>
+Schedule data: <https://spla3.yuu26.com/>
