@@ -1,11 +1,11 @@
 {
   "name": "bankara-misskey-bot",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Misskeyにスケジュール更新を流すBotです。",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node --env-file=.env index.js",
+    "start": "node index.js",
     "doc": "jsdoc -c ./jsdoc.json"
   },
   "repository": {
